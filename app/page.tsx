@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import jobsData from "../jobs.json";
 
 type Job = {
   id: number;
@@ -8,16 +9,16 @@ type Job = {
   logo: string;
   tone: string;
   title: string;
-  field: "연료전지" | "배터리·에너지저장";
-  function: "연구·개발" | "생산·품질·공정" | "설비 운영·현장 관리";
+  field: string;
+  function: string;
   location: string;
-  locationGroup: "수도권" | "대전";
-  companyType: "대기업" | "연구기관";
-  employment: "인턴" | "신입 정규직";
-  experience: "신입·경력무관" | "경력 1년 이하";
-  education: "재학생·졸업예정자·졸업자";
-  major: "관련 전공 필수" | "관련 전공 우대";
-  workMode: "혼합형" | "출근";
+  locationGroup: string;
+  companyType: string;
+  employment: string;
+  experience: string;
+  education: string;
+  major: string;
+  workMode: string;
   deadline: string;
   days: number;
   posted: number;
@@ -26,14 +27,45 @@ type Job = {
   reason: string;
 };
 
-const jobs: Job[] = [
-  { id: 1, company: "현대모비스", logo: "M", tone: "navy", title: "수소연료전지 시스템 연구개발 신입", field: "연료전지", function: "연구·개발", location: "경기 용인시", locationGroup: "수도권", companyType: "대기업", employment: "신입 정규직", experience: "신입·경력무관", education: "재학생·졸업예정자·졸업자", major: "관련 전공 필수", workMode: "출근", deadline: "D-6", days: 6, posted: 4, tags: ["스택 설계", "시스템 평가"], match: 96, reason: "에너지공학 전공과 연구·개발 희망 업무가 정확히 맞아요" },
-  { id: 2, company: "SK E&S", logo: "S", tone: "red", title: "수소·연료전지 사업기획 인턴", field: "연료전지", function: "연구·개발", location: "서울 종로구", locationGroup: "수도권", companyType: "대기업", employment: "인턴", experience: "신입·경력무관", education: "재학생·졸업예정자·졸업자", major: "관련 전공 우대", workMode: "혼합형", deadline: "D-3", days: 3, posted: 7, tags: ["시장 조사", "사업 전략"], match: 94, reason: "재학생 지원 가능 + 연료전지 사업 직무예요" },
-  { id: 3, company: "LG에너지솔루션", logo: "L", tone: "pink", title: "배터리 소재 공정개발 신입", field: "배터리·에너지저장", function: "생산·품질·공정", location: "경기 과천시", locationGroup: "수도권", companyType: "대기업", employment: "신입 정규직", experience: "경력 1년 이하", education: "재학생·졸업예정자·졸업자", major: "관련 전공 필수", workMode: "출근", deadline: "D-11", days: 11, posted: 6, tags: ["공정 개선", "소재 품질"], match: 91, reason: "배터리 분야와 공정 업무 경험을 함께 살릴 수 있어요" },
-  { id: 4, company: "한화솔루션", logo: "H", tone: "orange", title: "ESS 품질관리 인턴", field: "배터리·에너지저장", function: "생산·품질·공정", location: "경기 판교", locationGroup: "수도권", companyType: "대기업", employment: "인턴", experience: "신입·경력무관", education: "재학생·졸업예정자·졸업자", major: "관련 전공 우대", workMode: "혼합형", deadline: "D-9", days: 9, posted: 3, tags: ["품질 데이터", "ESS 운영"], match: 89, reason: "전공 우대 + 혼합형 근무 조건을 모두 충족해요" },
-  { id: 5, company: "두산퓨얼셀", logo: "D", tone: "teal", title: "연료전지 생산기술 신입", field: "연료전지", function: "설비 운영·현장 관리", location: "대전 유성구", locationGroup: "대전", companyType: "대기업", employment: "신입 정규직", experience: "신입·경력무관", education: "재학생·졸업예정자·졸업자", major: "관련 전공 필수", workMode: "출근", deadline: "D-14", days: 14, posted: 9, tags: ["설비 관리", "현장 개선"], match: 88, reason: "대전 근무 + 에너지공학 관련 전공 필수 공고예요" },
-  { id: 6, company: "한국에너지기술연구원", logo: "K", tone: "green", title: "연료전지 실증 연구보조 인턴", field: "연료전지", function: "연구·개발", location: "대전 유성구", locationGroup: "대전", companyType: "연구기관", employment: "인턴", experience: "신입·경력무관", education: "재학생·졸업예정자·졸업자", major: "관련 전공 우대", workMode: "혼합형", deadline: "D-18", days: 18, posted: 2, tags: ["실증 시험", "연구 지원"], match: 86, reason: "연료전지 연구 경험을 시작하기 좋은 인턴 공고예요" },
-];
+const tones = ["navy", "red", "pink", "orange", "teal", "green"];
+const daysUntil = (yyyymmdd: string) => {
+  const end = new Date(Number(yyyymmdd.slice(0, 4)), Number(yyyymmdd.slice(4, 6)) - 1, Number(yyyymmdd.slice(6, 8)));
+  return Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
+};
+const jobs: Job[] = jobsData.map((item, index) => {
+  const text = [item.title, ...(item.ncsNames ?? [])].join(" ");
+  const isFuelCell = /연료전지|수소/u.test(text);
+  const isBattery = /배터리|ESS|에너지저장/u.test(text);
+  const field = isFuelCell ? "연료전지" : isBattery ? "배터리·에너지저장" : "공공기관 채용";
+  const fn = (item.ncsNames ?? []).join(" ");
+  const jobFunction = /연구|과학/u.test(fn) ? "연구·개발" : /기계|전기|환경|건설/u.test(fn) ? "설비 운영·현장 관리" : "생산·품질·공정";
+  const region = (item.workRegionNames ?? []).join(", ") || "지역 미정";
+  const employment = (item.hireTypeNames ?? []).some((name) => name.includes("청년인턴")) ? "인턴" : item.recruitmentTypeName?.includes("신입") ? "신입 정규직" : (item.hireTypeNames ?? []).join(", ") || "고용형태 미정";
+  const days = daysUntil(item.endDate);
+  return {
+    id: Number(item.recrutPblntSn),
+    company: item.institutionName,
+    logo: (item.institutionName || "공").slice(0, 1),
+    tone: tones[index % tones.length],
+    title: item.title,
+    field,
+    function: jobFunction,
+    location: region,
+    locationGroup: region.includes("대전") ? "대전" : region.match(/서울|인천|경기/) ? "수도권" : region,
+    companyType: "공공기관",
+    employment,
+    experience: item.recruitmentTypeName || "지원 조건 확인",
+    education: (item.educationNames ?? []).join(", ") || "학력 조건 확인",
+    major: (item.ncsNames ?? []).join(", ") || "직무 조건 확인",
+    workMode: "출근",
+    deadline: item.endDate ? "D-" + days : "마감일 미정",
+    days,
+    posted: index,
+    tags: (item.ncsNames ?? []).slice(0, 2),
+    match: isFuelCell || isBattery ? 90 : 78,
+    reason: "공공데이터포털에서 수집한 진행 중 실제 공고입니다.",
+  };
+});
 
 type Filters = {
   fields: string[];
@@ -124,4 +156,3 @@ export default function Home() {
     </main>
   );
 }
-
